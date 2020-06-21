@@ -1,0 +1,110 @@
+---
+title: 'Taller Rladies BA: Visualizando datos textuales'
+output:
+  html_document:
+    df_print: paged
+---
+
+Cargamos las librerías necesarias para trabajar
+
+```{r}
+library(tidyverse)
+library(tidytext)
+```
+
+Levantamos el CSV directamente a tibble
+```{r}
+mistral_tibble <- read_csv2("corpus_mistral.csv", locale(encoding = "ISO-8859-1"), col_names = TRUE, col_types = NULL)
+
+```
+
+A tokenizar!
+```{r}
+poemas_palabras <- mistral_tibble %>% 
+  select(text) %>%  
+  unnest_tokens(word,text)
+
+head(poemas_palabras,10)
+```
+
+Contemos las palabras más frecuentes:
+```{r}
+poemas_palabras %>% 
+  count(word, sort = TRUE)
+```
+
+Parece que deberíamos limpiar este corpus para que no contenga stopwords o artículos. Vamos a descargar un listado de stopwords en español del sitio "Bits & Bricks", mantenido por el científico de datos Antonio Vázquez Brust
+
+```{r}
+stopwords<- read.csv("https://bitsandbricks.github.io/data/stopwords_es.csv",
+                      stringsAsFactors = FALSE)
+head(stopwords)
+```
+
+
+Ahora eliminaremos esas stopwords de nuestro corpus. 
+```{r}
+poemas_palabras_filtrado <- poemas_palabras %>% 
+  anti_join(stopwords, by = c("word" = "STOPWORD"))
+```
+
+Vamos de nuevo con nuestro conteo de frecuencias:
+```{r}
+palabras_frecuencias <- poemas_palabras_filtrado %>% 
+  count(word, sort = TRUE)
+head(palabras_frecuencias)
+```
+
+
+Ahora sí, a visualizar!
+Filtramos para solo quedarnos con las palabras que superen cierto umbral de casos
+```{r}
+grafico_barras <- poemas_palabras_filtrado %>% count(word, sort=TRUE) %>% 
+  filter(n > 20) %>% 
+  mutate(word = reorder(word,-n)) %>% 
+  ggplot(aes(word,n)) + geom_col() 
+grafico_barras
+```
+
+
+Sumamos paratextos, damos nombre a los ejes y optimizamos el ángulo del eje X
+```{r}
+grafico_barras <- grafico_barras + 
+  theme(axis.text.x = element_text(angle=45)) + 
+  ylab("Frecuencia de uso") + 
+  xlab("Palabra") + 
+  ggtitle(label = "Palabras más utilizadas en los poemas scrapeados de Gabriela Mistral", subtitle = "Fuente del corpus: sitio 'Poemas del alma'")
+grafico_barras
+```
+
+
+Probemos otro tipo de visualización: una nube de palabras
+```{r}
+library(wordcloud2)
+wordcloud2(data=palabras_frecuencias)
+```
+
+BONUS TRACK: bigramas!
+```{r}
+#Tokenizamos por bigramas
+bigramas <- mistral_tibble %>% 
+  unnest_tokens(bigram, text, token="ngrams", n=2)
+
+#Separamos por palabras para poder eliminar stopwords
+bigramas_separados <- bigramas %>%
+  separate(bigram, c("palabra1", "palabra2"), sep = " ")
+
+#Filtramos stopwords
+bigramas_filtrados <- bigramas_separados %>%
+  filter(!palabra1 %in% stopwords$STOPWORD) %>%
+  filter(!palabra2 %in% stopwords$STOPWORD)
+
+#Volvemos a unir:
+bigramas_unidos <- bigramas_filtrados %>%
+  unite(bigram, palabra1, palabra2, sep = " ") %>% 
+  count(bigram,sort = TRUE) %>% 
+  filter(bigram!="NA NA")
+
+#Visualizamos!
+wordcloud2(bigramas_unidos)
+```
