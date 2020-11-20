@@ -14,7 +14,10 @@ library(tidytext)
 
 Levantamos el CSV directamente a tibble
 ```{r}
-mistral_tibble <- read_csv2("corpus_mistral.csv", locale(encoding = "ISO-8859-1"), col_names = TRUE, col_types = NULL)
+mistral_tibble <- read_csv2("corpus_mistral.csv", 
+                            locale(encoding = "ISO-8859-1"), 
+                            col_names = TRUE, 
+                            col_types = NULL)
 
 ```
 
@@ -59,7 +62,8 @@ head(palabras_frecuencias)
 Ahora sí, a visualizar!
 Filtramos para solo quedarnos con las palabras que superen cierto umbral de casos
 ```{r}
-grafico_barras <- poemas_palabras_filtrado %>% count(word, sort=TRUE) %>% 
+grafico_barras <- poemas_palabras_filtrado %>% 
+  count(word, sort=TRUE) %>% 
   filter(n > 20) %>% 
   mutate(word = reorder(word,-n)) %>% 
   ggplot(aes(word,n)) + geom_col() 
@@ -105,6 +109,11 @@ bigramas_unidos <- bigramas_filtrados %>%
   count(bigram,sort = TRUE) %>% 
   filter(bigram!="NA NA")
 
-#Visualizamos!
+
+```
+
+Visualizamos!
+```{r}
 wordcloud2(bigramas_unidos)
 ```
+
